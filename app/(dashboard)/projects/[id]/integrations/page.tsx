@@ -57,10 +57,12 @@ const INTEGRATION_CONFIG = [
   {
     type: "sheets",
     label: "Google Sheets",
-    description: "Read task and page tracking sheets",
+    description: "Sync tasks from a public Google Sheet (columns: title, status, assignee, dueDate)",
     icon: "📊",
-    oauth: true,
-    comingSoon: true,
+    oauth: false,
+    fields: [
+      { key: "sheetUrl", label: "Google Sheets URL", placeholder: "https://docs.google.com/spreadsheets/d/..." },
+    ],
   },
 ];
 
@@ -88,14 +90,20 @@ export default function IntegrationsPage() {
 
   async function handleSync(type: string) {
     setLoading((l) => ({ ...l, [type]: true }));
+    // sheets/wordpress/github use main route with action; gsc has dedicated /sync
+    const useActionRoute = ["sheets", "wordpress", "github"].includes(type);
+    const url = useActionRoute ? `/api/integrations/${type}` : `/api/integrations/${type}/sync`;
+    const body = useActionRoute
+      ? JSON.stringify({ projectId, action: "sync" })
+      : JSON.stringify({ projectId });
     try {
-      const res = await fetch(`/api/integrations/${type}/sync`, {
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId }),
+        body,
       });
       if (!res.ok) throw new Error("Sync failed");
-      toast.success(`${type.toUpperCase()} synced successfully`);
+      toast.success("Synced successfully");
       fetchIntegrations();
     } catch {
       toast.error("Sync failed");
@@ -170,9 +178,7 @@ export default function IntegrationsPage() {
                 )}
 
                 <div className="flex gap-2">
-                  {config.comingSoon ? (
-                    <Badge variant="outline">Coming Soon</Badge>
-                  ) : isConnected ? (
+                  {isConnected ? (
                     <>
                       <Button
                         size="sm"

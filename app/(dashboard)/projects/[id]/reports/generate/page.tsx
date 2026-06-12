@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Sparkles, Calendar, FileText, Loader2 } from "lucide-react";
+import { Sparkles, Calendar, FileText, Loader2, Palette, LayoutTemplate } from "lucide-react";
 import { format, subDays, startOfWeek, endOfWeek } from "date-fns";
 
 interface PromptTemplate {
@@ -26,6 +26,12 @@ const DATE_PRESETS = [
   { label: "Custom", value: "custom" },
 ];
 
+const FONT_OPTIONS = [
+  { label: "Inter (Default)", value: "Inter" },
+  { label: "Georgia (Serif)", value: "Georgia" },
+  { label: "Roboto Mono (Monospace)", value: "Roboto Mono" },
+];
+
 export default function GenerateReportPage() {
   const params = useParams();
   const router = useRouter();
@@ -39,6 +45,8 @@ export default function GenerateReportPage() {
   const [customPrompt, setCustomPrompt] = useState("");
   const [customNotes, setCustomNotes] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [selectedFont, setSelectedFont] = useState("Inter");
+  const [showCoverPage, setShowCoverPage] = useState(false);
 
   const fetchTemplates = useCallback(async () => {
     const res = await fetch(`/api/prompts?projectId=${projectId}`);
@@ -82,6 +90,10 @@ export default function GenerateReportPage() {
           promptTemplateId: selectedTemplate !== "custom" ? selectedTemplate : undefined,
           customPrompt: selectedTemplate === "custom" ? customPrompt : undefined,
           customNotes,
+          brandConfig: {
+            font: selectedFont,
+            showCoverPage,
+          },
         }),
       });
       const data = await res.json();
@@ -158,6 +170,50 @@ export default function GenerateReportPage() {
         </CardContent>
       </Card>
 
+      {/* Branding */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Palette className="w-4 h-4 text-[#4F8EF7]" />
+            Branding
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Report Font</Label>
+            <Select value={selectedFont} onValueChange={setSelectedFont}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FONT_OPTIONS.map((f) => (
+                  <SelectItem key={f.value} value={f.value}>
+                    {f.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowCoverPage(!showCoverPage)}
+              className={`relative w-10 h-5 rounded-full transition-colors ${showCoverPage ? "bg-[#4F8EF7]" : "bg-[#e2e8f0]"}`}
+              role="switch"
+              aria-checked={showCoverPage}
+            >
+              <span
+                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${showCoverPage ? "left-5" : "left-0.5"}`}
+              />
+            </button>
+            <div>
+              <p className="text-sm font-medium text-[#0f172a]">Cover Page</p>
+              <p className="text-xs text-[#64748b]">Show a branded cover page at the top of the report</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Prompt Template */}
       <Card>
         <CardHeader className="pb-3">
@@ -199,7 +255,10 @@ export default function GenerateReportPage() {
       {/* Custom Notes */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Additional Notes</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            <LayoutTemplate className="w-4 h-4 text-[#4F8EF7]" />
+            Additional Notes
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Textarea

@@ -2,26 +2,51 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { reportQueue } from "@/lib/queue";
+import redis from "@/lib/redis";
 
-const RATE_LIMIT_MAP = new Map<string, { count: number; resetAt: number }>();
+function sanitizePrompt(text: string): string {
+  const injectionPatterns = [
+    /ignore\s+(previous|all|prior)\s+instructions?/gi,
+    /you\s+are\s+now\s+/gi,
+    /disregard\s+(previous|all|prior)\s+/gi,
+    /forget\s+(everything|all|previous)\s+/gi,
+    /act\s+as\s+/gi,
+    /pretend\s+(you\s+are|to\s+be)\s+/gi,
+    /system\s+prompt/gi,
+    /\[INST\]/gi,
+    /\[\/INST\]/gi,
+    /<\|im_start\|>/gi,
+    /<\|im_end\|>/gi,
+  ];
 
-function checkRateLimit(orgId: string): boolean {
-  const now = Date.now();
-  const entry = RATE_LIMIT_MAP.get(orgId);
-  if (!entry || entry.resetAt < now) {
-    RATE_LIMIT_MAP.set(orgId, { count: 1, resetAt: now + 3600000 });
+  let sanitized = text;
+  for (const pattern of injectionPatterns) {
+    sanitized = sanitized.replace(pattern, "[redacted]");
+  }
+
+  return sanitized.slice(0, 2000);
+}
+
+async function checkRateLimit(orgId: string): Promise<boolean> {
+  try {
+    const key = `ratelimit:report:${orgId}`;
+    const count = await redis.incr(key);
+    if (count === 1) {
+      await redis.expire(key, 3600);
+    }
+    return count <= 10;
+  } catch {
+    // If Redis is unavailable, fall back to allowing the request
     return true;
   }
-  if (entry.count >= 10) return false;
-  entry.count++;
-  return true;
 }
 
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (!checkRateLimit(session.user.orgId)) {
+  const allowed = await checkRateLimit(session.user.orgId);
+  if (!allowed) {
     return NextResponse.json({ error: "Rate limit exceeded (10 reports/hour)" }, { status: 429 });
   }
 
@@ -33,8 +58,10 @@ export async function POST(req: NextRequest) {
   });
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-  let promptUsed = customPrompt;
-  if (promptTemplateId && !customPrompt) {
+  let promptUsed = customPrompt ? sanitizePrompt(customPrompt) : undefined;
+  const sanitizedNotes = customNotes ? sanitizePrompt(customNotes) : customNotes;
+
+  if (promptTemplateId && !promptUsed) {
     const template = await prisma.promptTemplate.findFirst({
       where: { id: promptTemplateId },
     });
@@ -60,7 +87,7 @@ Include analysis of search performance trends, task completion rates, and action
       dateTo: new Date(dateTo),
       promptUsed,
       promptTemplateId,
-      customNotes,
+      customNotes: sanitizedNotes,
       brandConfig,
     },
   });
@@ -71,7 +98,7 @@ Include analysis of search performance trends, task completion rates, and action
     dateFrom,
     dateTo,
     promptUsed,
-    customNotes,
+    customNotes: sanitizedNotes,
   });
 
   return NextResponse.json({ reportId: report.id, status: "queued" }, { status: 202 });

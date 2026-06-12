@@ -5,8 +5,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plug, CheckSquare, FileText, Plus, RefreshCw, CheckCircle, AlertCircle, Clock } from "lucide-react";
-import { format } from "date-fns";
+import { GscChart } from "@/components/report/gsc-chart";
+import { Plug, CheckSquare, FileText, Plus, CheckCircle, AlertCircle, Clock, TrendingUp } from "lucide-react";
+import { format, subDays } from "date-fns";
 
 export default async function ProjectOverviewPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -22,20 +23,33 @@ export default async function ProjectOverviewPage({ params }: { params: Promise<
 
   if (!project) notFound();
 
-  const recentTasks = await prisma.task.findMany({
-    where: { projectId: id, status: { in: ["pending", "in_progress"] } },
-    take: 5,
-    orderBy: { createdAt: "desc" },
-  });
+  const thirtyDaysAgo = subDays(new Date(), 30);
 
-  const recentReports = await prisma.report.findMany({
-    where: { projectId: id },
-    take: 3,
-    orderBy: { createdAt: "desc" },
-  });
+  const [recentTasks, recentReports, gscSnapshots] = await Promise.all([
+    prisma.task.findMany({
+      where: { projectId: id, status: { in: ["pending", "in_progress"] } },
+      take: 5,
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.report.findMany({
+      where: { projectId: id },
+      take: 3,
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.gscSnapshot.findMany({
+      where: { projectId: id, date: { gte: thirtyDaysAgo } },
+      orderBy: { date: "asc" },
+    }),
+  ]);
 
   const integrationTypes = ["gsc", "sheets", "wordpress", "github"];
   const integrationMap = Object.fromEntries(project.integrations.map((i) => [i.type, i]));
+
+  const gscChartData = gscSnapshots.map((s) => ({
+    date: s.date.toISOString(),
+    clicks: s.clicks,
+    impressions: s.impressions,
+  }));
 
   return (
     <div className="space-y-6">
@@ -87,6 +101,19 @@ export default async function ProjectOverviewPage({ params }: { params: Promise<
           </Link>
         ))}
       </div>
+
+      {/* GSC Trend Chart */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-[#4F8EF7]" />
+            Search Performance — Last 30 Days
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <GscChart data={gscChartData} />
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Integrations */}

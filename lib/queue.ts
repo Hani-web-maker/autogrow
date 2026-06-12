@@ -9,4 +9,10 @@ export const redisConnection = {
   password: url.password || undefined,
 };
 
-export const reportQueue = new Queue("reports", { connection: redisConnection });
+export const reportQueue = new Queue("reports", {
+  connection: redisConnection,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: { type: "exponential", delay: 5000 },
+  },
+});

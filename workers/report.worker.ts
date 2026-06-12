@@ -127,7 +127,9 @@ const worker = new Worker(
       throw error;
     }
   },
-  { connection: redisConnection }
+  {
+    connection: redisConnection,
+  }
 );
 
 worker.on("failed", (job, err) => {
