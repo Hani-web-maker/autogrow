@@ -38,6 +38,49 @@ export interface ReportOutput {
   nextWeekPlan: string;
 }
 
+const REPORT_KEYS: (keyof ReportOutput)[] = [
+  "executiveSummary",
+  "gscInsights",
+  "tasksCompleted",
+  "pagesPublished",
+  "recommendations",
+  "nextWeekPlan",
+];
+
+/** Strips markdown code fences and surrounding prose, returning the first balanced {...} object found. */
+function extractJsonObject(raw: string): string {
+  let text = raw.trim();
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenceMatch) {
+    text = fenceMatch[1].trim();
+  }
+
+  const start = text.indexOf("{");
+  if (start === -1) return text;
+
+  let depth = 0;
+  for (let i = start; i < text.length; i++) {
+    if (text[i] === "{") depth++;
+    else if (text[i] === "}") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return text.slice(start);
+}
+
+function parseReportOutput(raw: string): ReportOutput {
+  const jsonText = extractJsonObject(raw);
+  const parsed = JSON.parse(jsonText) as Partial<Record<keyof ReportOutput, unknown>>;
+
+  const result = {} as ReportOutput;
+  for (const key of REPORT_KEYS) {
+    const value = parsed[key];
+    result[key] = typeof value === "string" ? value : "";
+  }
+  return result;
+}
+
 export async function generateReport(
   context: ReportContext,
   userPrompt: string
@@ -53,16 +96,39 @@ Write in a confident, professional tone. No markdown code blocks in your respons
 Context Data:
 ${JSON.stringify(context, null, 2)}`;
 
-  const message = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 4096,
-    system: systemPrompt,
-    messages: [{ role: "user", content: userMessage }],
-  });
+  const messages: Anthropic.MessageParam[] = [{ role: "user", content: userMessage }];
 
-  const content = message.content[0];
-  if (content.type !== "text") throw new Error("Unexpected response type from Claude");
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const message = await client.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 4096,
+      system: systemPrompt,
+      messages,
+    });
 
-  const jsonText = content.text.trim();
-  return JSON.parse(jsonText) as ReportOutput;
+    const content = message.content[0];
+    if (content.type !== "text") throw new Error("Unexpected response type from Claude");
+
+    try {
+      return parseReportOutput(content.text);
+    } catch (err) {
+      lastError = err;
+      // Ask the model to repair its own output and retry once.
+      messages.push(
+        { role: "assistant", content: content.text },
+        {
+          role: "user",
+          content:
+            "That response was not valid JSON. Reply again with ONLY the raw JSON object — no prose, no code fences.",
+        }
+      );
+    }
+  }
+
+  throw new Error(
+    `Failed to parse Claude report output as JSON: ${
+      lastError instanceof Error ? lastError.message : String(lastError)
+    }`
+  );
 }
