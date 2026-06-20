@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 import { prisma } from "./db";
-import { decryptJSON } from "./encryption";
+import { decryptJSON, encryptJSON } from "./encryption";
 
 interface GscCredentials {
   access_token: string;
@@ -25,15 +25,27 @@ export async function getGscClient(projectId: string) {
   const creds = decryptJSON<GscCredentials>(integration.credentials);
   const oauth2Client = getOAuth2Client();
   oauth2Client.setCredentials(creds);
+
+  // Persist refreshed access tokens so long-lived syncs keep working without re-auth.
+  oauth2Client.on("tokens", (newTokens) => {
+    const merged = { ...creds, ...newTokens };
+    prisma.integration
+      .update({
+        where: { projectId_type: { projectId, type: "gsc" } },
+        data: { credentials: encryptJSON(merged as Record<string, unknown>) },
+      })
+      .catch((err) => console.error("Failed to persist refreshed GSC tokens:", err));
+  });
+
   return oauth2Client;
 }
 
-export function getGscAuthUrl(projectId: string) {
+export function getGscAuthUrl(state: string) {
   const oauth2Client = getOAuth2Client();
   return oauth2Client.generateAuthUrl({
     access_type: "offline",
     scope: ["https://www.googleapis.com/auth/webmasters.readonly"],
-    state: projectId,
+    state,
     prompt: "consent",
   });
 }

@@ -1,14 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { encryptJSON } from "@/lib/encryption";
+import { verifyOAuthState } from "@/lib/oauth-state";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
-  const projectId = searchParams.get("state");
+  const state = searchParams.get("state");
 
-  if (!code || !projectId) {
+  if (!code || !state) {
+    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/projects?error=gsc_failed`);
+  }
+
+  const statePayload = verifyOAuthState(state);
+  if (!statePayload) {
+    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/projects?error=gsc_failed`);
+  }
+  const { projectId, userId } = statePayload;
+
+  const session = await auth();
+  if (!session?.user?.orgId || session.user.id !== userId) {
+    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/login?error=gsc_failed`);
+  }
+
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, orgId: session.user.orgId },
+  });
+  if (!project) {
     return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/projects?error=gsc_failed`);
   }
 
