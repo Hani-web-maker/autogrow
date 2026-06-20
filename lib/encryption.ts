@@ -1,6 +1,12 @@
 import CryptoJS from "crypto-js";
 
-const KEY = process.env.ENCRYPTION_KEY || "fallback-key-32-chars-exactly!!";
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length < 16) {
+  throw new Error(
+    "ENCRYPTION_KEY environment variable is required and must be at least 16 characters long"
+  );
+}
+const KEY: string = ENCRYPTION_KEY;
 
 export function encrypt(text: string): string {
   return CryptoJS.AES.encrypt(text, KEY).toString();
