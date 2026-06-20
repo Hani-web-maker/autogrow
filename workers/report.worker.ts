@@ -2,6 +2,7 @@ import { Worker } from "bullmq";
 import { PrismaClient } from "@prisma/client";
 import { generateReport, ReportContext } from "../lib/claude";
 import { redisConnection } from "../lib/queue";
+import { fetchGscData } from "../lib/gsc";
 
 const prisma = new PrismaClient();
 
@@ -54,7 +55,9 @@ const worker = new Worker(
         },
       });
 
-      // Fetch GSC snapshot
+      // Fetch GSC snapshot for the exact report period. Cached snapshots are keyed
+      // by sync date, not report period, so fall back to a live fetch for the
+      // requested date range when no matching snapshot exists (e.g. past weeks).
       const gscSnapshot = await prisma.gscSnapshot.findFirst({
         where: {
           projectId,
@@ -62,6 +65,15 @@ const worker = new Worker(
         },
         orderBy: { date: "desc" },
       });
+
+      let liveGscData: Awaited<ReturnType<typeof fetchGscData>> | null = null;
+      if (!gscSnapshot) {
+        try {
+          liveGscData = await fetchGscData(projectId, project.websiteUrl, dateFrom, dateTo);
+        } catch (err) {
+          console.warn(`GSC live fetch failed for project ${projectId}:`, err);
+        }
+      }
 
       const context: ReportContext = {
         project: {
@@ -101,6 +113,8 @@ const worker = new Worker(
           topPages: (gscSnapshot.topPages as Array<{ url: string; clicks: number; impressions: number }>) || [],
           topQueries: (gscSnapshot.topQueries as Array<{ query: string; clicks: number; impressions: number; position: number }>) || [],
         };
+      } else if (liveGscData) {
+        context.gscData = liveGscData;
       }
 
       const output = await generateReport(context, promptUsed);
