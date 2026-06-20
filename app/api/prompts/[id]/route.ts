@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { hasRole } from "@/lib/rbac";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!hasRole(session, ["admin", "manager"])) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const { id } = await params;
 
   const template = await prisma.promptTemplate.findFirst({
@@ -23,6 +27,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!hasRole(session, ["admin", "manager"])) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const { id } = await params;
 
   const template = await prisma.promptTemplate.findFirst({

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { hasRole } from "@/lib/rbac";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -34,6 +35,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!hasRole(session, ["admin", "manager"])) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const body = await req.json();
   const { name, body: templateBody, projectId, isDefault } = body;
