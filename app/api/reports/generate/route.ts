@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { reportQueue } from "@/lib/queue";
-import redis from "@/lib/redis";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 function sanitizePrompt(text: string): string {
   const injectionPatterns = [
@@ -27,25 +27,11 @@ function sanitizePrompt(text: string): string {
   return sanitized.slice(0, 2000);
 }
 
-async function checkRateLimit(orgId: string): Promise<boolean> {
-  try {
-    const key = `ratelimit:report:${orgId}`;
-    const count = await redis.incr(key);
-    if (count === 1) {
-      await redis.expire(key, 3600);
-    }
-    return count <= 10;
-  } catch {
-    // If Redis is unavailable, fall back to allowing the request
-    return true;
-  }
-}
-
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const allowed = await checkRateLimit(session.user.orgId);
+  const allowed = await checkRateLimit(`ratelimit:report:${session.user.orgId}`, 10, 3600);
   if (!allowed) {
     return NextResponse.json({ error: "Rate limit exceeded (10 reports/hour)" }, { status: 429 });
   }
