@@ -135,3 +135,18 @@ Or set it in your CI/CD pipeline.
 | `AWS_SECRET_ACCESS_KEY` | For PDF export | S3 secret key |
 | `AWS_REGION` | For PDF export | e.g. `us-east-1` |
 | `AWS_S3_BUCKET` | For PDF export | S3 bucket name |
+
+---
+
+## Role-Based Access Control
+
+Users have one of three roles (`User.role`): `admin`, `manager`, `worker`.
+
+| Action | admin | manager | worker |
+|---|---|---|---|
+| View projects/tasks/reports in their org | ✅ | ✅ | ✅ |
+| Create/update tasks, sync integrations | ✅ | ✅ | ✅ |
+| Delete a project | ✅ | ✅ | ❌ |
+| Create/update/delete prompt templates | ✅ | ✅ | ❌ |
+
+Enforcement lives in `lib/rbac.ts` (`hasRole`) and is applied directly in the relevant API routes.
