@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,12 +11,9 @@ import { Save, User, Shield } from "lucide-react";
 
 export default function SettingsPage() {
   const { data: session, update } = useSession();
-  const [name, setName] = useState("");
+  const [nameOverride, setNameOverride] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (session?.user?.name) setName(session.user.name);
-  }, [session?.user?.name]);
+  const name = nameOverride ?? session?.user?.name ?? "";
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -58,7 +55,7 @@ export default function SettingsPage() {
               <Input
                 id="name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => setNameOverride(e.target.value)}
                 placeholder="Your name"
               />
             </div>

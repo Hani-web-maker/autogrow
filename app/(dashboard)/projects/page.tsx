@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Plus, Globe, FileText, CheckSquare, Wifi, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
 export default async function ProjectsPage() {

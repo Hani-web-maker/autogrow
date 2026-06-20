@@ -165,7 +165,6 @@ function SortableSection({
 
 export default function ReportViewPage() {
   const params = useParams();
-  const projectId = params.id as string;
   const reportId = params.reportId as string;
 
   const [report, setReport] = useState<Report | null>(null);
@@ -195,6 +194,8 @@ export default function ReportViewPage() {
   }, [reportId]);
 
   useEffect(() => {
+    // Intentional fetch-on-mount; setState happens after the async fetch resolves.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchReport();
   }, [fetchReport]);
 

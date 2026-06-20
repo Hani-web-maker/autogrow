@@ -46,6 +46,9 @@ export default function PromptsPage() {
   }, [projectId]);
 
   useEffect(() => {
+    // Intentional fetch-on-mount; setState happens after the async fetch resolves,
+    // not synchronously within the effect body.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTemplates();
   }, [fetchTemplates]);
 

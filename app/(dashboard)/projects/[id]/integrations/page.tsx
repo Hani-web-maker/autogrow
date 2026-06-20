@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CheckCircle, AlertCircle, Clock, RefreshCw, ExternalLink } from "lucide-react";
+import { CheckCircle, Clock, RefreshCw, ExternalLink } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { format } from "date-fns";
 
@@ -76,6 +76,7 @@ export default function IntegrationsPage() {
 
   useEffect(() => {
     fetchIntegrations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchIntegrations() {

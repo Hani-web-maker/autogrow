@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
+    console.error(`GSC sync failed for project ${projectId}:`, error);
     await prisma.integration.update({
       where: { projectId_type: { projectId, type: "gsc" } },
       data: { status: "error" },

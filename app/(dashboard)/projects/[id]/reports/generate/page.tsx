@@ -57,6 +57,8 @@ export default function GenerateReportPage() {
   }, [projectId]);
 
   useEffect(() => {
+    // Intentional fetch-on-mount; setState happens after the async fetch resolves.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTemplates();
   }, [fetchTemplates]);
 
