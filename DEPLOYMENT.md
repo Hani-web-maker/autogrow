@@ -95,6 +95,10 @@ ENCRYPTION_KEY=<generate with: openssl rand -hex 16>
 3. Railway will detect `railway.toml` and run: `npm run worker`
 4. Add **all the same environment variables** from Step 5 in the Railway Variables tab
 5. The worker process connects to Redis, listens for BullMQ jobs, and calls the Claude API
+6. The same process also runs the **PDF export worker** (`workers/pdf.worker.ts`), which uses
+   full `puppeteer` to render `/report-preview/[id]` (a token-gated, public render-only route)
+   to PDF and uploads it to S3. This must run on Railway (not Vercel) because Vercel's
+   serverless functions don't ship a Chromium binary.
 
 ---
 

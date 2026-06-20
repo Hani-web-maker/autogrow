@@ -19,3 +19,18 @@ export const reportQueue = new Queue("reports", {
     backoff: { type: "exponential", delay: 5000 },
   },
 });
+
+export interface PdfJobData {
+  reportId: string;
+  token: string;
+}
+
+// PDF rendering runs on the Railway worker (full puppeteer, persistent container)
+// rather than in a Vercel serverless function, which has no Chromium binary.
+export const pdfQueue = new Queue<PdfJobData>("pdf-export", {
+  connection: redisConnection,
+  defaultJobOptions: {
+    attempts: 2,
+    backoff: { type: "exponential", delay: 5000 },
+  },
+});

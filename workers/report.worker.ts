@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { generateReport, ReportContext } from "../lib/claude";
 import { redisConnection } from "../lib/queue";
 import { fetchGscData } from "../lib/gsc";
+import { pdfWorker } from "./pdf.worker";
 
 const prisma = new PrismaClient();
 
@@ -155,6 +156,6 @@ worker.on("completed", (job) => {
 });
 
 process.on("SIGTERM", async () => {
-  await worker.close();
+  await Promise.all([worker.close(), pdfWorker.close()]);
   await prisma.$disconnect();
 });

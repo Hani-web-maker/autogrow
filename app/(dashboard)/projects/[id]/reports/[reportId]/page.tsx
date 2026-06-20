@@ -269,9 +269,19 @@ export default function ReportViewPage() {
       const res = await fetch(`/api/reports/${reportId}/export-pdf`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      window.open(data.pdfUrl, "_blank");
-      toast.success("PDF exported successfully!");
-      fetchReport();
+
+      // PDF generation runs asynchronously on the worker — poll until pdfUrl appears.
+      const deadline = Date.now() + 60_000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const updated = await fetchReport();
+        if (updated.pdfUrl) {
+          window.open(updated.pdfUrl, "_blank");
+          toast.success("PDF exported successfully!");
+          return;
+        }
+      }
+      toast.error("PDF export is taking longer than expected. Check back shortly.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Export failed");
     } finally {
