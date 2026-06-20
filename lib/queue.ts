@@ -7,6 +7,9 @@ export const redisConnection = {
   host: url.hostname,
   port: parseInt(url.port || "6379"),
   password: url.password || undefined,
+  // Required by BullMQ — it manages its own retry/backoff strategy.
+  maxRetriesPerRequest: null,
+  ...(url.protocol === "rediss:" ? { tls: {} } : {}),
 };
 
 export const reportQueue = new Queue("reports", {
