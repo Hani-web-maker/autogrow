@@ -46,7 +46,8 @@
 ## Step 4 — Google OAuth + GSC
 
 1. Go to https://console.cloud.google.com → New Project
-2. Enable APIs: **Google Search Console API**, **Google Sheets API**
+2. Enable APIs: **Google Search Console API**
+   - The Sheets integration does not use the Sheets API or OAuth — it reads the sheet's public CSV export, so the sheet must be shared as "Anyone with the link" → Viewer.
 3. OAuth consent screen → External → add scopes:
    - `https://www.googleapis.com/auth/webmasters.readonly`
 4. Credentials → OAuth 2.0 Client ID → Web application

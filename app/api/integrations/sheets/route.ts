@@ -73,12 +73,23 @@ export async function POST(req: NextRequest) {
     const config = integration.config as { sheetId: string } | null;
     if (!config?.sheetId) return NextResponse.json({ error: "Sheet ID missing" }, { status: 400 });
 
-    // Fetch as CSV (public sheets only)
+    // This integration only supports sheets shared as "Anyone with the link can view" —
+    // there is no OAuth/Sheets-API path. Private sheets fail with a clear error below.
     const csvUrl = `https://docs.google.com/spreadsheets/d/${config.sheetId}/export?format=csv`;
+    const PRIVATE_SHEET_ERROR =
+      "Could not read this Google Sheet. Make sure it's shared as \"Anyone with the link\" → Viewer, then try again.";
     let csvText: string;
     try {
-      const res = await fetch(csvUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const res = await fetch(csvUrl, { redirect: "follow" });
+      // Private/non-public sheets redirect to a Google accounts login page instead of
+      // returning the export, which fetch() follows and reports as a 200 HTML response.
+      if (!res.ok || res.url.includes("accounts.google.com")) {
+        return NextResponse.json({ error: PRIVATE_SHEET_ERROR }, { status: 400 });
+      }
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("text/csv") && !contentType.includes("text/plain")) {
+        return NextResponse.json({ error: PRIVATE_SHEET_ERROR }, { status: 400 });
+      }
       csvText = await res.text();
     } catch (err) {
       return NextResponse.json({
