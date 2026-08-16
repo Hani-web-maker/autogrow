@@ -13,7 +13,7 @@ const Charts = (() => {
   }
 
   // Rank chart: lower rank = better, so the y-axis is inverted (rank 1 at top).
-  function rankLineChart(canvas, history, { color = '#2563eb' } = {}) {
+  function rankLineChart(canvas, history, { color = '#0C4A73' } = {}) {
     if (!history || history.length === 0) return;
     const { ctx, w, h } = setupCanvas(canvas);
     ctx.clearRect(0, 0, w, h);
@@ -70,7 +70,7 @@ const Charts = (() => {
     ctx.fillText(`#${maxRank}`, 2, pad.top + 8);
   }
 
-  function barChart(canvas, data, { color = '#0d9488', horizontal = true } = {}) {
+  function barChart(canvas, data, { color = '#0C4A73', horizontal = true } = {}) {
     const { ctx, w, h } = setupCanvas(canvas);
     ctx.clearRect(0, 0, w, h);
     if (!data.length) return;

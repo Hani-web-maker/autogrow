@@ -1,18 +1,69 @@
-/* print.css — applied only when printing/exporting a report to PDF via window.print() */
+/* print.css — branded print/PDF stylesheet, used only when printing/exporting
+   a report via window.print(). Adds a repeating logo header + footer with
+   page numbers on every printed page, and brand-colored section dividers. */
+@page {
+  margin: 26mm 14mm 20mm;
+}
+
 @media print {
   .sidebar, .topbar, .content-banner, .tab-nav, .toast-container,
-  .modal-backdrop, .no-print, .view-header-actions, .banner {
+  .modal-backdrop, .no-print, .view-header-actions, .banner, .sidebar-scrim {
     display: none !important;
   }
   .app-shell, .main-col, .view-outlet { display: block !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
   body { background: #fff !important; }
+
   .report-sheet {
     box-shadow: none !important;
     border: none !important;
     padding: 0 !important;
     max-width: 100% !important;
   }
-  .report-section { break-inside: avoid; }
+
+  /* Repeating header + footer: fixed-position elements are re-drawn on every
+     printed page by the browser's print engine, which is what gives us a
+     logo + page number on each page without any PDF library. */
+  .print-header-fixed {
+    display: flex !important;
+    position: fixed;
+    top: -20mm;
+    left: 0;
+    right: 0;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--brand-primary);
+  }
+  .print-header-fixed img { height: 22px; width: auto; }
+  .print-header-fixed span { font-size: 10px; color: var(--brand-navy); font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+
+  .print-footer-fixed {
+    display: flex !important;
+    position: fixed;
+    bottom: -16mm;
+    left: 0;
+    right: 0;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 6px;
+    border-top: 1px solid var(--gray-200);
+    font-size: 9.5px;
+    color: var(--gray-500);
+  }
+  .print-footer-fixed .pagenum::after { content: 'Page ' counter(page); }
+
+  .report-cover-page {
+    page-break-after: always;
+    min-height: 210mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .report-section { break-inside: avoid; border-top: 3px solid var(--brand-primary); padding-top: 10px; }
+  .report-section h2 { color: var(--brand-navy) !important; }
   .report-table { break-inside: avoid; }
+  .report-notes-input { display: none !important; }
+  .report-notes-print { display: block !important; }
   a[href]::after { content: ''; }
 }

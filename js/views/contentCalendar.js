@@ -32,9 +32,9 @@
         <button class="btn btn-primary" id="cc-add-btn">+ New Content</button>
       </div>
       <div class="cal-nav">
-        <button class="icon-btn" id="cc-prev">‹</button>
+        <button class="icon-btn" id="cc-prev" aria-label="Previous month">‹</button>
         <span id="cc-month-label" class="cal-month-label"></span>
-        <button class="icon-btn" id="cc-next">›</button>
+        <button class="icon-btn" id="cc-next" aria-label="Next month">›</button>
         <button class="link-btn" id="cc-today">Today</button>
       </div>
       <div id="cc-body"></div>
@@ -164,7 +164,7 @@
     const projects = DB.all('projects');
     const team = DB.all('team');
     const html = `
-      <div class="modal-header"><h3>${isEdit ? 'Edit Content' : 'New Content Item'}</h3><button class="icon-btn" data-act="close">&times;</button></div>
+      <div class="modal-header"><h3>${isEdit ? 'Edit Content' : 'New Content Item'}</h3><button class="icon-btn" data-act="close" aria-label="Close">&times;</button></div>
       <div class="modal-body">
         <div class="task-field"><label>Title</label><input type="text" id="ctf-title" value="${Utils.escapeHtml(item?.title || '')}" /></div>
         <div class="task-field-grid">

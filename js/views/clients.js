@@ -60,7 +60,7 @@
   function openClientForm(client) {
     const isEdit = !!client;
     const html = `
-      <div class="modal-header"><h3>${isEdit ? 'Edit Client' : 'New Client'}</h3><button class="icon-btn" data-act="close">&times;</button></div>
+      <div class="modal-header"><h3>${isEdit ? 'Edit Client' : 'New Client'}</h3><button class="icon-btn" data-act="close" aria-label="Close">&times;</button></div>
       <div class="modal-body">
         <div class="task-field"><label>Client / Company name</label><input type="text" id="cf-name" value="${Utils.escapeHtml(client?.name || '')}" /></div>
         <div class="task-field-grid">
@@ -91,9 +91,20 @@
       </div>`;
     const panel = ModalManager.open(html, { size: 'md' });
     Utils.qsa('[data-act="close"]', panel).forEach((b) => b.addEventListener('click', () => ModalManager.close()));
-    Utils.qs('#cf-save', panel).addEventListener('click', () => {
+    Utils.qs('#cf-save', panel).addEventListener('click', async () => {
       const name = Utils.qs('#cf-name', panel).value.trim();
       if (!name) { Toast.error('Client name is required'); return; }
+      const email = Utils.qs('#cf-email', panel).value.trim();
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { Toast.error('Enter a valid contact email'); return; }
+      const duplicate = DB.findByName('clients', name, client?.id);
+      if (duplicate) {
+        const proceed = await ModalManager.confirmDialog({
+          title: 'Duplicate client name',
+          message: `A client named "${duplicate.name}" already exists. Create another one with the same name anyway?`,
+          confirmLabel: 'Create Anyway',
+        });
+        if (!proceed) return;
+      }
       const patch = {
         name,
         contactName: Utils.qs('#cf-contact', panel).value.trim(),
@@ -179,10 +190,24 @@
       <div class="panel">
         <div class="panel-header">
           <h3>Projects</h3>
-          <button class="btn btn-primary btn-sm" id="new-project-btn">+ New Project</button>
+          <div class="view-header-actions">
+            <button class="btn btn-ghost btn-sm" id="new-seo-project-btn">+ New SEO Project</button>
+            <button class="btn btn-primary btn-sm" id="new-project-btn">+ New Project</button>
+          </div>
         </div>
         <div class="panel-body">
           ${projects.length ? `<div class="project-list">${projects.map((p) => projectRow(p)).join('')}</div>` : `<div class="empty-inline-panel">No projects yet for this client.</div>`}
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Site Access</h3>
+          <button class="btn btn-primary btn-sm" id="new-site-access-btn">+ Add Site Access</button>
+        </div>
+        <div class="panel-body">
+          <p class="hint-text site-access-notice">Reference inventory only — GrowMark does not store passwords. Keep actual credentials in your team's password manager and link to them here.</p>
+          <div id="site-access-list"></div>
         </div>
       </div>
     `;
@@ -204,6 +229,100 @@
     });
     document.getElementById('new-project-btn').addEventListener('click', () => {
       window.ProjectsView.openProjectForm(null, client.id, () => Router.render());
+    });
+    document.getElementById('new-seo-project-btn').addEventListener('click', () => {
+      window.ProjectsView.openSeoProjectWizard(client.id, () => Router.render());
+    });
+    document.getElementById('new-site-access-btn').addEventListener('click', () => openSiteAccessForm(client));
+    renderSiteAccessList(client);
+  }
+
+  // ---------- Site Access (Option B: reference inventory, no stored secrets) ----------
+  function renderSiteAccessList(client) {
+    const container = document.getElementById('site-access-list');
+    if (!container) return;
+    const entries = DB.all('siteAccess').filter((s) => s.clientId === client.id);
+    if (!entries.length) {
+      container.innerHTML = `<div class="empty-inline-panel">No site access recorded yet. Add the client's site URL, CMS, and where the team can find login credentials.</div>`;
+      return;
+    }
+    container.innerHTML = entries.map((s) => `
+      <div class="site-access-card" data-id="${s.id}">
+        <div class="site-access-card-top">
+          <strong>${Utils.escapeHtml(s.label || s.siteUrl || 'Site access')}</strong>
+          <div class="row-actions">
+            <button class="icon-btn-sm" data-act="edit-site-access" data-id="${s.id}" aria-label="Edit site access">✎</button>
+            <button class="icon-btn-sm" data-act="delete-site-access" data-id="${s.id}" aria-label="Delete site access">🗑</button>
+          </div>
+        </div>
+        <div class="kv-row"><span>Site URL</span><strong>${s.siteUrl ? `<a href="${Utils.escapeHtml(s.siteUrl)}" target="_blank" rel="noopener">${Utils.escapeHtml(s.siteUrl)}</a>` : '—'}</strong></div>
+        <div class="kv-row"><span>CMS / Host</span><strong>${Utils.escapeHtml(s.cmsHost || '—')}</strong></div>
+        <div class="kv-row"><span>GSC property</span><strong>${Utils.escapeHtml(s.gscProperty || '—')}</strong></div>
+        <div class="kv-row"><span>GA4 property</span><strong>${Utils.escapeHtml(s.ga4Property || '—')}</strong></div>
+        <div class="kv-row"><span>Hosting / registrar</span><strong>${Utils.escapeHtml(s.hostingRegistrar || '—')}</strong></div>
+        <div class="kv-row"><span>Credentials</span><strong>${Utils.escapeHtml(s.credentialsRef || '—')}</strong></div>
+        ${s.linkOut ? `<div class="kv-row"><span>Link out</span><strong><a href="${Utils.escapeHtml(s.linkOut)}" target="_blank" rel="noopener">Open →</a></strong></div>` : ''}
+        ${s.notes ? `<div class="site-access-notes">${Utils.escapeHtml(s.notes)}</div>` : ''}
+      </div>`).join('');
+
+    Utils.qsa('[data-act="edit-site-access"]', container).forEach((btn) => {
+      btn.addEventListener('click', () => openSiteAccessForm(client, DB.get('siteAccess', btn.dataset.id)));
+    });
+    Utils.qsa('[data-act="delete-site-access"]', container).forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const ok = await ModalManager.confirmDialog({ title: 'Delete site access entry', message: 'Remove this site access record?', confirmLabel: 'Delete', danger: true });
+        if (ok) { DB.remove('siteAccess', btn.dataset.id); Toast.success('Removed'); renderSiteAccessList(client); }
+      });
+    });
+  }
+
+  function openSiteAccessForm(client, entry) {
+    const isEdit = !!entry;
+    const html = `
+      <div class="modal-header"><h3>${isEdit ? 'Edit Site Access' : 'Add Site Access'}</h3><button class="icon-btn" data-act="close" aria-label="Close">&times;</button></div>
+      <div class="modal-body">
+        <p class="hint-text site-access-notice">Store references only — e.g. "in 1Password: Client Vault". GrowMark does not encrypt or store actual passwords.</p>
+        <div class="task-field"><label>Label</label><input type="text" id="sa-label" placeholder="e.g. Primary WordPress site" value="${Utils.escapeHtml(entry?.label || '')}" /></div>
+        <div class="task-field-grid">
+          <div class="task-field"><label>Site URL</label><input type="text" id="sa-url" placeholder="https://client-site.com" value="${Utils.escapeHtml(entry?.siteUrl || '')}" /></div>
+          <div class="task-field"><label>CMS / Host</label><input type="text" id="sa-cms" placeholder="e.g. WordPress on WP Engine" value="${Utils.escapeHtml(entry?.cmsHost || '')}" /></div>
+          <div class="task-field"><label>GSC property</label><input type="text" id="sa-gsc" value="${Utils.escapeHtml(entry?.gscProperty || '')}" /></div>
+          <div class="task-field"><label>GA4 property</label><input type="text" id="sa-ga4" value="${Utils.escapeHtml(entry?.ga4Property || '')}" /></div>
+          <div class="task-field"><label>Hosting / domain registrar</label><input type="text" id="sa-hosting" value="${Utils.escapeHtml(entry?.hostingRegistrar || '')}" /></div>
+          <div class="task-field"><label>Credentials location</label><input type="text" id="sa-creds" placeholder="e.g. in 1Password — Client Vault" value="${Utils.escapeHtml(entry?.credentialsRef || '')}" /></div>
+        </div>
+        <div class="task-field"><label>Link out (optional)</label><input type="text" id="sa-linkout" placeholder="Direct link to the password manager entry" value="${Utils.escapeHtml(entry?.linkOut || '')}" /></div>
+        <div class="task-field"><label>Notes</label><textarea id="sa-notes" rows="2">${Utils.escapeHtml(entry?.notes || '')}</textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-act="close">Cancel</button>
+        <button class="btn btn-primary" id="sa-save">${isEdit ? 'Save Changes' : 'Add Site Access'}</button>
+      </div>`;
+    const panel = ModalManager.open(html, { size: 'md' });
+    Utils.qsa('[data-act="close"]', panel).forEach((b) => b.addEventListener('click', () => ModalManager.close()));
+    Utils.qs('#sa-save', panel).addEventListener('click', () => {
+      const siteUrl = Utils.qs('#sa-url', panel).value.trim();
+      const label = Utils.qs('#sa-label', panel).value.trim();
+      if (!siteUrl && !label) { Toast.error('Enter at least a label or site URL'); return; }
+      const patch = {
+        label, siteUrl,
+        cmsHost: Utils.qs('#sa-cms', panel).value.trim(),
+        gscProperty: Utils.qs('#sa-gsc', panel).value.trim(),
+        ga4Property: Utils.qs('#sa-ga4', panel).value.trim(),
+        hostingRegistrar: Utils.qs('#sa-hosting', panel).value.trim(),
+        credentialsRef: Utils.qs('#sa-creds', panel).value.trim(),
+        linkOut: Utils.qs('#sa-linkout', panel).value.trim(),
+        notes: Utils.qs('#sa-notes', panel).value.trim(),
+      };
+      if (isEdit) {
+        DB.update('siteAccess', entry.id, patch);
+        Toast.success('Site access updated');
+      } else {
+        DB.insert('siteAccess', { id: Utils.uid('sa'), clientId: client.id, createdAt: new Date().toISOString(), ...patch });
+        Toast.success('Site access added');
+      }
+      ModalManager.close();
+      renderSiteAccessList(client);
     });
   }
 

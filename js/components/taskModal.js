@@ -47,7 +47,7 @@ const TaskModal = (() => {
           <div class="task-modal-breadcrumb">${client ? Utils.escapeHtml(client.name) : ''}${project ? ' / ' + Utils.escapeHtml(project.name) : ''}</div>
           <input type="text" id="tm-title" class="task-title-input" value="${Utils.escapeHtml(task.title)}" />
         </div>
-        <button class="icon-btn" data-act="close">&times;</button>
+        <button class="icon-btn" data-act="close" aria-label="Close">&times;</button>
       </div>
       <div class="modal-body task-modal-body">
         ${isRecurringInstance ? `<div class="recurring-note">↻ Auto-generated from a recurring task</div>` : ''}
@@ -139,7 +139,7 @@ const TaskModal = (() => {
         <div class="subtask-row" data-id="${s.id}">
           <input type="checkbox" ${s.done ? 'checked' : ''} data-act="toggle-subtask" />
           <span class="${s.done ? 'done' : ''}">${Utils.escapeHtml(s.title)}</span>
-          <button class="icon-btn-sm" data-act="remove-subtask">&times;</button>
+          <button class="icon-btn-sm" data-act="remove-subtask" aria-label="Remove checklist item">&times;</button>
         </div>`).join('')}`;
   }
 
@@ -150,7 +150,7 @@ const TaskModal = (() => {
         <span class="attachment-name">📎 ${Utils.escapeHtml(a.name)}</span>
         <span class="attachment-size">${Utils.fileSizeLabel(a.size)}</span>
         <a href="${a.dataUrl}" download="${Utils.escapeHtml(a.name)}" class="link-btn">Download</a>
-        <button class="icon-btn-sm" data-act="remove-attachment">&times;</button>
+        <button class="icon-btn-sm" data-act="remove-attachment" aria-label="Remove attachment">&times;</button>
       </div>`).join('');
   }
 
@@ -300,7 +300,7 @@ const TaskModal = (() => {
   function openCreateForm(defaults, { onCreate } = {}) {
     const project = defaults.projectId ? DB.get('projects', defaults.projectId) : null;
     const html = `
-      <div class="modal-header"><h3>New Task</h3><button class="icon-btn" data-act="close">&times;</button></div>
+      <div class="modal-header"><h3>New Task</h3><button class="icon-btn" data-act="close" aria-label="Close">&times;</button></div>
       <div class="modal-body task-modal-body">
         <div class="task-field">
           <label>Title</label>

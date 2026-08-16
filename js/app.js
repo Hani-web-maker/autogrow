@@ -1,4 +1,5 @@
-// app.js — application shell: sidebar, topbar, global search, notifications.
+// app.js — application shell: sidebar, topbar, global search, notifications,
+// and the boot sequence (onboarding → login gate → normal app).
 const App = (() => {
   const NAV = [
     { path: '/dashboard', label: 'Dashboard', icon: 'grid' },
@@ -10,6 +11,7 @@ const App = (() => {
     { path: '/backlinks', label: 'Backlinks', icon: 'link' },
     { path: '/reports', label: 'Reports', icon: 'file' },
     { path: '/team', label: 'Team', icon: 'users' },
+    { path: '/settings', label: 'Settings', icon: 'settings' },
   ];
 
   const ICONS = {
@@ -24,6 +26,9 @@ const App = (() => {
     users: '<circle cx="9" cy="8" r="4"/><path d="M2 21v-2a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v2"/><circle cx="18" cy="9" r="3"/><path d="M17 14a5 5 0 0 1 5 5v2"/>',
     bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+    menu: '<path d="M3 6h18M3 12h18M3 18h18"/>',
+    logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
   };
 
   function icon(name, cls = '') {
@@ -34,11 +39,9 @@ const App = (() => {
     const root = document.getElementById('app-root');
     root.innerHTML = `
       <div class="app-shell">
-        <aside class="sidebar">
-          <div class="sidebar-brand">
-            <span class="brand-mark">${icon('trend')}</span>
-            <span class="brand-name">SEOFlow</span>
-          </div>
+        <div class="sidebar-scrim" id="sidebar-scrim" hidden></div>
+        <aside class="sidebar" id="sidebar">
+          <div class="sidebar-brand">${Brand.sidebarBrandHtml()}</div>
           <nav class="sidebar-nav" id="sidebar-nav">
             ${NAV.map((n) => `
               <a href="#${n.path}" class="nav-item" data-path="${n.path}">
@@ -47,20 +50,24 @@ const App = (() => {
           </nav>
           <div class="sidebar-footer">
             <div class="user-switcher">
-              <label>Viewing as</label>
-              <select id="user-switcher-select"></select>
+              <label for="user-switcher-select">Viewing as</label>
+              <select id="user-switcher-select" aria-label="Switch current user"></select>
             </div>
+            ${Auth.isConfigured() ? `<button class="link-btn sidebar-logout" id="logout-btn">${icon('logout', 'icon-sm')} Sign out</button>` : ''}
           </div>
         </aside>
         <div class="main-col">
           <header class="topbar">
+            <button class="icon-btn hamburger-btn" id="hamburger-btn" aria-label="Toggle navigation menu" aria-expanded="false">
+              ${icon('menu')}
+            </button>
             <div class="topbar-search">
               ${icon('search')}
-              <input type="text" id="global-search" placeholder="Search clients, projects, tasks…" autocomplete="off" />
+              <input type="text" id="global-search" placeholder="Search clients, projects, tasks…" autocomplete="off" aria-label="Global search" />
               <div class="search-results" id="search-results"></div>
             </div>
             <div class="topbar-actions">
-              <button class="icon-btn" id="notif-btn" title="Notifications">
+              <button class="icon-btn" id="notif-btn" title="Notifications" aria-label="Notifications" aria-haspopup="true">
                 ${icon('bell')}<span class="notif-dot" id="notif-dot" hidden></span>
               </button>
               <div class="notif-panel" id="notif-panel" hidden></div>
@@ -75,7 +82,32 @@ const App = (() => {
     bindUserSwitcher();
     bindSearch();
     bindNotifications();
+    bindSidebarToggle();
+    bindLogout();
     renderBanner();
+  }
+
+  function bindSidebarToggle() {
+    const sidebar = document.getElementById('sidebar');
+    const scrim = document.getElementById('sidebar-scrim');
+    const btn = document.getElementById('hamburger-btn');
+    const close = () => { sidebar.classList.remove('open'); scrim.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+    btn.addEventListener('click', () => {
+      const willOpen = !sidebar.classList.contains('open');
+      sidebar.classList.toggle('open', willOpen);
+      scrim.hidden = !willOpen;
+      btn.setAttribute('aria-expanded', String(willOpen));
+    });
+    scrim.addEventListener('click', close);
+    Utils.qsa('.nav-item', document.getElementById('sidebar-nav')).forEach((a) => a.addEventListener('click', close));
+  }
+
+  function bindLogout() {
+    document.getElementById('logout-btn')?.addEventListener('click', () => {
+      Auth.logout();
+      Toast.info('Signed out');
+      boot();
+    });
   }
 
   function setActiveNav(path) {
@@ -88,8 +120,9 @@ const App = (() => {
   function bindUserSwitcher() {
     const sel = document.getElementById('user-switcher-select');
     const team = DB.all('team');
+    const user = DB.currentUser();
     sel.innerHTML = team.map((u) => `<option value="${u.id}">${Utils.escapeHtml(u.name)}</option>`).join('');
-    sel.value = DB.currentUser().id;
+    if (user) sel.value = user.id;
     sel.addEventListener('change', () => {
       DB.setCurrentUser(sel.value);
       Toast.info(`Now viewing as ${DB.get('team', sel.value).name}`);
@@ -187,11 +220,13 @@ const App = (() => {
 
   function updateNotifDot() {
     const hasUnread = DB.all('activity').some((a) => !a.read);
-    document.getElementById('notif-dot').hidden = !hasUnread;
+    const dot = document.getElementById('notif-dot');
+    if (dot) dot.hidden = !hasUnread;
   }
 
   function renderBanner() {
     const banner = document.getElementById('content-banner');
+    if (!banner) return;
     const draftReports = DB.all('reports').filter((r) => r.status === 'draft');
     if (!draftReports.length) { banner.innerHTML = ''; return; }
     const names = draftReports.map((r) => DB.get('clients', r.clientId)?.name).filter(Boolean);
@@ -200,7 +235,7 @@ const App = (() => {
         ${icon('bell')}
         <span>${draftReports.length} report draft${draftReports.length > 1 ? 's' : ''} ready for review: ${Utils.escapeHtml(names.join(', '))}.</span>
         <a href="#/reports" class="banner-link">Open Reports →</a>
-        <button class="banner-dismiss" id="banner-dismiss">&times;</button>
+        <button class="banner-dismiss" id="banner-dismiss" aria-label="Dismiss">&times;</button>
       </div>`;
     document.getElementById('banner-dismiss').addEventListener('click', () => { banner.innerHTML = ''; });
   }
@@ -221,13 +256,28 @@ const App = (() => {
     renderBanner();
   }
 
-  function init() {
+  /** Full boot sequence: onboarding (if empty) → login gate (if configured) → app shell. */
+  function boot() {
     DB.init();
+    if (!DB.settings().onboarded) {
+      Onboarding.render(boot);
+      return;
+    }
+    if (Auth.isConfigured() && !Auth.isAuthenticated()) {
+      Auth.renderLogin({ onSuccess: boot });
+      return;
+    }
+    Auth.armActivityListener();
+    Auth.startSessionWatcher(boot);
     renderShell();
     Router.start();
   }
 
-  return { init, icon, setActiveNav, refreshChrome, timeAgo };
+  function init() {
+    boot();
+  }
+
+  return { init, boot, icon, setActiveNav, refreshChrome, timeAgo };
 })();
 
 document.addEventListener('DOMContentLoaded', App.init);

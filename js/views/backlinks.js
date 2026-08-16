@@ -84,8 +84,8 @@
         <td><span class="badge status-${b.status.toLowerCase()}">${b.status}</span></td>
         <td>${Utils.formatDate(b.dateAcquired)}</td>
         <td class="row-actions">
-          <button class="icon-btn-sm" data-act="edit" data-id="${b.id}" title="Edit">✎</button>
-          <button class="icon-btn-sm" data-act="delete" data-id="${b.id}" title="Delete">🗑</button>
+          <button class="icon-btn-sm" data-act="edit" data-id="${b.id}" title="Edit" aria-label="Edit backlink">✎</button>
+          <button class="icon-btn-sm" data-act="delete" data-id="${b.id}" title="Delete" aria-label="Delete backlink">🗑</button>
         </td>
       </tr>`;
     }).join('');
@@ -95,7 +95,7 @@
     const isEdit = !!link;
     const clients = DB.all('clients');
     const html = `
-      <div class="modal-header"><h3>${isEdit ? 'Edit Backlink' : 'Add Backlink'}</h3><button class="icon-btn" data-act="close">&times;</button></div>
+      <div class="modal-header"><h3>${isEdit ? 'Edit Backlink' : 'Add Backlink'}</h3><button class="icon-btn" data-act="close" aria-label="Close">&times;</button></div>
       <div class="modal-body">
         <div class="task-field"><label>Source domain</label><input type="text" id="blf-domain" placeholder="example.com" value="${Utils.escapeHtml(link?.sourceDomain || '')}" /></div>
         <div class="task-field-grid">

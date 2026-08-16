@@ -144,11 +144,74 @@
             }).join('') : `<div class="empty-inline-panel">Nothing upcoming.</div>`}
           </div>
         </div>
+        ${project.seo ? seoSnapshotPanel(project) : ''}
       </div>
     `;
     Utils.qsa('.task-list-row', content).forEach((row) => {
       row.addEventListener('click', () => TaskModal.open(row.dataset.id, { onChange: () => renderOverview(content, project) }));
     });
+  }
+
+  // ---------- SEO snapshot (target keywords, competitors, scope, baseline vs current) ----------
+  function seoSnapshotPanel(project) {
+    const seo = project.seo;
+    const baseline = seo.baseline || {};
+    const projectKeywords = DB.all('keywords').filter((k) => k.projectId === project.id);
+    const baselineRankByKeyword = {};
+    (baseline.startingKeywordRankings || []).forEach((r) => { baselineRankByKeyword[r.keyword] = r.rank; });
+
+    return `
+      <div class="panel panel-wide">
+        <div class="panel-header"><h3>SEO Snapshot</h3></div>
+        <div class="panel-body">
+          <div class="detail-grid seo-snapshot-grid">
+            <div>
+              <div class="seo-snapshot-label">Scope</div>
+              <div>${(seo.scope || []).map((s) => `<span class="tag-chip">${Utils.escapeHtml(s)}</span>`).join('') || '<span class="empty-inline">—</span>'}</div>
+            </div>
+            <div>
+              <div class="seo-snapshot-label">Primary competitors</div>
+              <div>${(seo.competitors || []).map((c) => `<span class="tag-chip">${Utils.escapeHtml(c)}</span>`).join('') || '<span class="empty-inline">—</span>'}</div>
+            </div>
+            <div>
+              <div class="seo-snapshot-label">Reporting cadence</div>
+              <div>${seo.reportingCadence && seo.reportingCadence !== 'none' ? Utils.escapeHtml(seo.reportingCadence) : '<span class="empty-inline">Not scheduled</span>'}</div>
+            </div>
+          </div>
+          <div class="stat-grid seo-baseline-grid">
+            <div class="stat-card">
+              <div class="stat-value">${baseline.startingTraffic ? baseline.startingTraffic.toLocaleString() : '—'}</div>
+              <div class="stat-label">Baseline monthly traffic</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">${baseline.startingDA || '—'}</div>
+              <div class="stat-label">Baseline DA</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">${baseline.startingDR || '—'}</div>
+              <div class="stat-label">Baseline DR</div>
+            </div>
+          </div>
+          ${projectKeywords.length ? `
+          <div class="table-wrap">
+            <table class="data-table data-table-sm">
+              <thead><tr><th>Target keyword</th><th>Baseline rank</th><th>Current rank</th><th>Change</th></tr></thead>
+              <tbody>
+                ${projectKeywords.map((k) => {
+                  const current = k.history[k.history.length - 1]?.rank ?? null;
+                  const baselineRank = baselineRankByKeyword[k.keyword] ?? null;
+                  let changeHtml = '<span class="rank-flat">—</span>';
+                  if (baselineRank !== null && current !== null) {
+                    const change = baselineRank - current;
+                    changeHtml = change > 0 ? `<span class="rank-up">▲ ${change}</span>` : change < 0 ? `<span class="rank-down">▼ ${Math.abs(change)}</span>` : '<span class="rank-flat">— 0</span>';
+                  }
+                  return `<tr><td>${Utils.escapeHtml(k.keyword)}</td><td>${baselineRank ? '#' + baselineRank : '—'}</td><td>${current ? '#' + current : '—'}</td><td>${changeHtml}</td></tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>` : `<div class="empty-inline-panel">Tracking starts once keyword rank updates are recorded.</div>`}
+        </div>
+      </div>`;
   }
 
   // ---------- Tasks tab ----------
@@ -447,7 +510,7 @@
                 </td>
                 <td>${Utils.formatDate(i.foundDate)}</td>
                 <td>${i.resolvedDate ? Utils.formatDate(i.resolvedDate) : '—'}</td>
-                <td class="row-actions"><button class="icon-btn-sm" data-act="delete-issue" data-id="${i.id}">🗑</button></td>
+                <td class="row-actions"><button class="icon-btn-sm" data-act="delete-issue" data-id="${i.id}" aria-label="Delete issue">🗑</button></td>
               </tr>`).join('') : `<tr><td colspan="6"><div class="empty-inline-panel">No issues logged for this project.</div></td></tr>`}
           </tbody>
         </table>
@@ -474,7 +537,7 @@
 
   function openIssueForm(project, issue, onSaved) {
     const html = `
-      <div class="modal-header"><h3>Log Issue</h3><button class="icon-btn" data-act="close">&times;</button></div>
+      <div class="modal-header"><h3>Log Issue</h3><button class="icon-btn" data-act="close" aria-label="Close">&times;</button></div>
       <div class="modal-body">
         <div class="task-field"><label>Title</label><input type="text" id="if-title" /></div>
         <div class="task-field"><label>Description</label><textarea id="if-desc" rows="3"></textarea></div>
@@ -581,7 +644,7 @@
         <div class="comment-meta"><strong>${Utils.escapeHtml(author?.name || 'Unknown')}</strong> <span>${App.timeAgo(n.createdAt)}</span></div>
         <div class="comment-text">${Utils.escapeHtml(n.text)}</div>
       </div>
-      <button class="icon-btn-sm" data-act="remove-note" data-id="${n.id}">&times;</button>
+      <button class="icon-btn-sm" data-act="remove-note" data-id="${n.id}" aria-label="Remove note">&times;</button>
     </div>`;
   }
 
@@ -591,7 +654,7 @@
       <span class="attachment-name">📎 ${Utils.escapeHtml(f.name)}</span>
       <span class="attachment-size">${Utils.fileSizeLabel(f.size)}</span>
       <a href="${f.dataUrl}" download="${Utils.escapeHtml(f.name)}" class="link-btn">Download</a>
-      <button class="icon-btn-sm" data-act="remove-file" data-id="${f.id}">&times;</button>
+      <button class="icon-btn-sm" data-act="remove-file" data-id="${f.id}" aria-label="Remove file">&times;</button>
     </div>`;
   }
 

@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SEOFlow — SEO Agency Project Management</title>
-  <meta name="description" content="Project management built for SEO agencies: clients, projects, tasks, keyword tracking, content calendar, backlinks, and client reporting." />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%231d4ed8'/%3E%3Cpath d='M4 17l6-6 4 4 8-8' stroke='white' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+  <title>GrowMark — SEO Agency Project Management by Growistan</title>
+  <meta name="description" content="GrowMark, by Growistan: project management built for SEO agencies — clients, projects, tasks, keyword tracking, content calendar, backlinks, and client reporting." />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/print.css" media="print" />
 </head>
 <body>
   <div id="app-root">
-    <noscript>SEOFlow requires JavaScript to run.</noscript>
+    <noscript>GrowMark requires JavaScript to run.</noscript>
   </div>
 
   <!-- Data layer & shared utilities -->
@@ -20,6 +20,9 @@
   <script src="js/toast.js" defer></script>
   <script src="js/modal.js" defer></script>
   <script src="js/router.js" defer></script>
+  <script src="js/brand.js" defer></script>
+  <script src="js/auth.js" defer></script>
+  <script src="js/csv.js" defer></script>
 
   <!-- Reusable components -->
   <script src="js/components/dnd.js" defer></script>
@@ -30,6 +33,7 @@
   <script src="js/app.js" defer></script>
 
   <!-- Views (each self-registers its route(s) with Router) -->
+  <script src="js/views/onboarding.js" defer></script>
   <script src="js/views/dashboard.js" defer></script>
   <script src="js/views/clients.js" defer></script>
   <script src="js/views/projects.js" defer></script>
@@ -40,5 +44,6 @@
   <script src="js/views/myTasks.js" defer></script>
   <script src="js/views/reports.js" defer></script>
   <script src="js/views/team.js" defer></script>
+  <script src="js/views/settings.js" defer></script>
 </body>
 </html>

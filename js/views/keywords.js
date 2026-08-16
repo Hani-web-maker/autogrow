@@ -79,7 +79,7 @@
 
     Utils.qsa('canvas[data-spark]', tbody).forEach((cv) => {
       const k = rows.find((r) => r.id === cv.dataset.spark);
-      Charts.rankLineChart(cv, k.history.slice(-8), { color: '#0d9488' });
+      Charts.rankLineChart(cv, k.history.slice(-8), { color: '#0C4A73' });
     });
     Utils.qsa('.kw-row', tbody).forEach((row) => {
       row.addEventListener('click', () => {
@@ -94,7 +94,7 @@
     const clients = DB.all('clients');
     const projects = DB.all('projects');
     const html = `
-      <div class="modal-header"><h3>${isEdit ? 'Edit Keyword' : 'Add Keyword'}</h3><button class="icon-btn" data-act="close">&times;</button></div>
+      <div class="modal-header"><h3>${isEdit ? 'Edit Keyword' : 'Add Keyword'}</h3><button class="icon-btn" data-act="close" aria-label="Close">&times;</button></div>
       <div class="modal-body">
         <div class="task-field"><label>Keyword</label><input type="text" id="kf-keyword" value="${Utils.escapeHtml(keyword?.keyword || '')}" /></div>
         <div class="task-field-grid">
@@ -149,7 +149,7 @@
     const client = DB.get('clients', keyword.clientId);
     const project = keyword.projectId ? DB.get('projects', keyword.projectId) : null;
     const html = `
-      <div class="modal-header"><h3>${Utils.escapeHtml(keyword.keyword)}</h3><button class="icon-btn" data-act="close">&times;</button></div>
+      <div class="modal-header"><h3>${Utils.escapeHtml(keyword.keyword)}</h3><button class="icon-btn" data-act="close" aria-label="Close">&times;</button></div>
       <div class="modal-body">
         <div class="kv-row"><span>Client</span><strong>${Utils.escapeHtml(client?.name || '—')}</strong></div>
         <div class="kv-row"><span>Project</span><strong>${Utils.escapeHtml(project?.name || '—')}</strong></div>
@@ -177,7 +177,7 @@
       </div>`;
     const panel = ModalManager.open(html, { size: 'md' });
     Utils.qsa('[data-act="close"]', panel).forEach((b) => b.addEventListener('click', () => ModalManager.close()));
-    Charts.rankLineChart(document.getElementById('kw-detail-chart'), keyword.history, { color: '#2563eb' });
+    Charts.rankLineChart(document.getElementById('kw-detail-chart'), keyword.history, { color: '#E5A800' });
 
     Utils.qs('#kw-add-rank', panel).addEventListener('click', () => {
       const date = Utils.qs('#kw-new-date', panel).value;

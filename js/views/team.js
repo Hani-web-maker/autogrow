@@ -83,7 +83,7 @@
     const isEdit = !!member;
     const colors = ['#2563eb', '#0d9488', '#7c3aed', '#d97706', '#dc2626', '#059669', '#db2777', '#4338ca'];
     const html = `
-      <div class="modal-header"><h3>${isEdit ? 'Edit Team Member' : 'Add Team Member'}</h3><button class="icon-btn" data-act="close">&times;</button></div>
+      <div class="modal-header"><h3>${isEdit ? 'Edit Team Member' : 'Add Team Member'}</h3><button class="icon-btn" data-act="close" aria-label="Close">&times;</button></div>
       <div class="modal-body">
         <div class="task-field"><label>Name</label><input type="text" id="mf-name" value="${Utils.escapeHtml(member?.name || '')}" /></div>
         <div class="task-field-grid">
@@ -114,6 +114,8 @@
     Utils.qs('#mf-save', panel).addEventListener('click', () => {
       const name = Utils.qs('#mf-name', panel).value.trim();
       if (!name) { Toast.error('Name is required'); return; }
+      const email = Utils.qs('#mf-email', panel).value.trim();
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { Toast.error('Enter a valid email address'); return; }
       const patch = {
         name,
         role: Utils.qs('#mf-role', panel).value.trim(),
