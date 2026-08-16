@@ -4,6 +4,17 @@ AI-powered SEO reporting platform for digital marketing agencies. Connects to a 
 Google Search Console, WordPress, GitHub, and Google Sheets, then uses Claude to generate
 branded, client-ready SEO performance reports on demand.
 
+## SEOFlow static demo app (`/docs`)
+
+This repository also contains **SEOFlow**, a separate, self-contained static
+project-management app for SEO agencies (clients, projects, Kanban/Gantt
+tasks, keyword tracking, content calendar, backlinks, technical audits, and
+automated client reporting). It's plain HTML/CSS/vanilla JS with no build
+step and no backend — data lives in the browser's `localStorage`. It's
+independent of the Next.js app above and lives entirely in [`docs/`](./docs),
+ready to deploy straight to GitHub Pages. See [`docs/README.md`](./docs/README.md)
+for details and deployment instructions.
+
 ## Stack
 
 - **Next.js 16** (App Router) on Vercel

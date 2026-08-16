@@ -1,0 +1,18 @@
+/* print.css — applied only when printing/exporting a report to PDF via window.print() */
+@media print {
+  .sidebar, .topbar, .content-banner, .tab-nav, .toast-container,
+  .modal-backdrop, .no-print, .view-header-actions, .banner {
+    display: none !important;
+  }
+  .app-shell, .main-col, .view-outlet { display: block !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+  body { background: #fff !important; }
+  .report-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+  .report-section { break-inside: avoid; }
+  .report-table { break-inside: avoid; }
+  a[href]::after { content: ''; }
+}
